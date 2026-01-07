@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  # Backend API Service
+  ng12-assessor:
+    build: .
+    container_name: ng12-cancer-assessor
+    ports:
+      - "8000:8000"
+    
+    volumes:
+      # Mount data directory for persistence
+      - ./data:/app/data
+      # Mount Google Cloud credentials
+      - ./ng12-service-account.json:/app/credentials.json:ro
+
+    env_file:
+      - .env
+    
+    restart: unless-stopped
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Frontend Service
+  ng12-frontend:
+    image: nginx:alpine
+    container_name: ng12-frontend
+    ports:
+      - "3000:80"
+    
+    volumes:
+      - ./frontend:/usr/share/nginx/html:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    
+    depends_on:
+      - ng12-assessor
+    
+    restart: unless-stopped
+    
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  default:
+    name: ng12-network

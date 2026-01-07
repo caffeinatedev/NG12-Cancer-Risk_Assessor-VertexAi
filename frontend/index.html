@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NG12 Cancer Risk Assessor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+        
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .api-status {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #27ae60;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .tabs {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .tab {
+            flex: 1;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            border: none;
+            background: transparent;
+            font-size: 1.1rem;
+            font-weight: 500;
+            color: #6c757d;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .tab:hover {
+            background: #e9ecef;
+            color: #495057;
+        }
+        
+        .tab.active {
+            color: #007bff;
+            background: white;
+        }
+        
+        .tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: #007bff;
+        }
+        
+        .tab-content {
+            display: none;
+            padding: 30px;
+            min-height: 500px;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .form-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+        }
+        
+        .form-section h3 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 1.3rem;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-row {
+            display: flex;
+            gap: 15px;
+            align-items: end;
+        }
+        
+        .form-row .form-group {
+            flex: 1;
+        }
+        
+        .form-row .form-group.auto {
+            flex: 0 0 auto;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        input, textarea, select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+        
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
+        }
+        
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,123,255,0.3);
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .result-card {
+            background: white;
+            border-radius: 8px;
+            padding: 25px;
+            margin-top: 25px;
+            border-left: 5px solid #28a745;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .result-card.error {
+            border-left-color: #dc3545;
+        }
+        
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .result-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .assessment-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .badge-urgent-referral {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .badge-urgent-investigation {
+            background: #fd7e14;
+            color: white;
+        }
+        
+        .badge-no-action {
+            background: #28a745;
+            color: white;
+        }
+        
+        .citations {
+            margin-top: 20px;
+        }
+        
+        .citations h4 {
+            color: #495057;
+            margin-bottom: 15px;
+            font-size: 1rem;
+        }
+        
+        .citation {
+            background: #f8f9fa;
+            border-left: 4px solid #007bff;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 0 6px 6px 0;
+        }
+        
+        .citation-header {
+            font-weight: 600;
+            color: #007bff;
+            margin-bottom: 8px;
+        }
+        
+        .citation-excerpt {
+            font-size: 13px;
+            color: #6c757d;
+            line-height: 1.4;
+        }
+        
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 600px;
+        }
+        
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .message {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+        }
+        
+        .message.user {
+            flex-direction: row-reverse;
+        }
+        
+        .message-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            color: white;
+            flex-shrink: 0;
+        }
+        
+        .message.user .message-avatar {
+            background: #007bff;
+        }
+        
+        .message.assistant .message-avatar {
+            background: #28a745;
+        }
+        
+        .message-content {
+            flex: 1;
+            background: white;
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .message.user .message-content {
+            background: #007bff;
+            color: white;
+        }
+        
+        .message-time {
+            font-size: 11px;
+            opacity: 0.7;
+            margin-top: 5px;
+        }
+        
+        .chat-input-area {
+            display: flex;
+            gap: 10px;
+            align-items: end;
+        }
+        
+        .chat-input-area textarea {
+            flex: 1;
+            resize: none;
+            min-height: 50px;
+        }
+        
+        .patient-selector {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        
+        .patient-card {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .patient-card:hover {
+            border-color: #007bff;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,123,255,0.1);
+        }
+        
+        .patient-card.selected {
+            border-color: #007bff;
+            background: #f8f9ff;
+        }
+        
+        .patient-id {
+            font-weight: 600;
+            color: #007bff;
+            margin-bottom: 5px;
+        }
+        
+        .patient-info {
+            font-size: 13px;
+            color: #6c757d;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .session-info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .session-controls {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>NG12 Cancer Risk Assessor</h1>
+            <p>Clinical Decision Support System using NICE NG12 Guidelines</p>
+            
+            <div class="api-status">
+                <div class="status-indicator">
+                    <div class="status-dot"></div>
+                    <span id="apiStatus">Checking API status...</span>
+                </div>
+                <div>
+                    <strong>Base URL:</strong> <span id="baseUrl">http://localhost:8000</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('assessment')">
+                📋 Patient Assessment
+            </button>
+            <button class="tab" onclick="switchTab('chat')">
+                💬 Clinical Guidelines Chat
+            </button>
+        </div>
+
+        <!-- Assessment Tab Content -->
+        <div id="assessment-tab" class="tab-content active">
+            <div class="form-section">
+                <h3>Patient Risk Assessment</h3>
+                <p style="margin-bottom: 20px; color: #6c757d;">
+                    Select a patient or enter a Patient ID to assess cancer risk based on NG12 guidelines.
+                </p>
+                
+                <!-- Patient Selector -->
+                <div class="patient-selector" id="patientSelector">
+                    <!-- Patient cards will be populated by JavaScript -->
+                </div>
+                
+                <!-- Manual Patient ID Input -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="patientId">Or Enter Patient ID Manually:</label>
+                        <input type="text" id="patientId" placeholder="e.g., PT-101">
+                    </div>
+                    <div class="form-group auto">
+                        <button class="btn btn-primary" onclick="assessPatient()" id="assessBtn">
+                            Assess Patient Risk
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Assessment Results -->
+            <div id="assessmentResults" class="hidden"></div>
+        </div>
+
+        <!-- Chat Tab Content -->
+        <div id="chat-tab" class="tab-content">
+            <div class="session-info">
+                <div>
+                    <strong>Session ID:</strong> <span id="sessionId"></span>
+                </div>
+                <div class="session-controls">
+                    <button class="btn btn-secondary" onclick="clearChat()">Clear Chat</button>
+                    <button class="btn btn-danger" onclick="deleteSession()">Delete Session</button>
+                </div>
+            </div>
+            
+            <div class="chat-container">
+                <div class="chat-messages" id="chatMessages">
+                    <div class="message assistant">
+                        <div class="message-avatar">AI</div>
+                        <div class="message-content">
+                            <div>Hello! I'm your NG12 Clinical Guidelines assistant. Ask me about cancer referral criteria, symptoms, or any other questions related to the NICE NG12 guidelines.</div>
+                            <div class="message-time">System message</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="chat-input-area">
+                    <textarea 
+                        id="chatMessage" 
+                        placeholder="Ask about NG12 guidelines... (e.g., 'What are the lung cancer referral criteria?')"
+                        onkeypress="handleChatKeyPress(event)"
+                    ></textarea>
+                    <button class="btn btn-primary" onclick="sendChatMessage()" id="chatBtn">
+                        Send
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let sessionId = 'session_' + Math.random().toString(36).substr(2, 9);
+        let selectedPatientId = null;
+        let patients = [];
+
+        // Initialize the application
+        window.onload = function() {
+            document.getElementById('sessionId').textContent = sessionId;
+            checkApiStatus();
+            loadPatients();
+        };
+
+        // Tab switching functionality
+        function switchTab(tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // Remove active class from all tabs
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab content
+            document.getElementById(tabName + '-tab').classList.add('active');
+            
+            // Add active class to selected tab
+            event.target.classList.add('active');
+        }
+
+        // API Status Check
+        async function checkApiStatus() {
+            try {
+                const response = await fetch('/health');
+                const data = await response.json();
+                document.getElementById('apiStatus').innerHTML = `
+                    <strong>✓ ${data.status}</strong> (v${data.version})
+                `;
+                document.getElementById('apiStatus').style.color = '#27ae60';
+            } catch (error) {
+                document.getElementById('apiStatus').innerHTML = `
+                    <strong>✗ API Unavailable</strong>
+                `;
+                document.getElementById('apiStatus').style.color = '#e74c3c';
+            }
+        }
+
+        // Load available patients
+        async function loadPatients() {
+            // Predefined patient list based on the data structure
+            patients = [
+                { id: 'PT-101', name: 'John Doe', age: 55, symptoms: ['unexplained hemoptysis', 'fatigue'] },
+                { id: 'PT-102', name: 'Jane Smith', age: 25, symptoms: ['persistent cough'] },
+                { id: 'PT-103', name: 'Robert Brown', age: 45, symptoms: ['persistent cough', 'shortness of breath'] },
+                { id: 'PT-104', name: 'Sarah Connor', age: 35, symptoms: ['dysphagia'] },
+                { id: 'PT-105', name: 'Michael Chang', age: 65, symptoms: ['iron-deficiency anaemia', 'fatigue'] },
+                { id: 'PT-106', name: 'Emily Blunt', age: 18, symptoms: ['fatigue'] },
+                { id: 'PT-107', name: 'David Bowie', age: 48, symptoms: ['persistent hoarseness'] },
+                { id: 'PT-108', name: 'Alice Wonderland', age: 32, symptoms: ['unexplained breast lump'] },
+                { id: 'PT-109', name: 'Tom Cruise', age: 45, symptoms: ['dyspepsia'] },
+                { id: 'PT-110', name: 'Bruce Wayne', age: 60, symptoms: ['visible haematuria'] }
+            ];
+
+            renderPatientSelector();
+        }
+
+        // Render patient selector cards
+        function renderPatientSelector() {
+            const selector = document.getElementById('patientSelector');
+            selector.innerHTML = patients.map(patient => `
+                <div class="patient-card" onclick="selectPatient('${patient.id}')">
+                    <div class="patient-id">${patient.id}</div>
+                    <div class="patient-info">
+                        <strong>${patient.name}</strong><br>
+                        Age: ${patient.age}<br>
+                        Symptoms: ${patient.symptoms.join(', ')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Select a patient
+        function selectPatient(patientId) {
+            selectedPatientId = patientId;
+            document.getElementById('patientId').value = patientId;
+            
+            // Update visual selection
+            document.querySelectorAll('.patient-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            event.target.closest('.patient-card').classList.add('selected');
+        }
+
+        // Assess patient risk
+        async function assessPatient() {
+            const patientId = document.getElementById('patientId').value || selectedPatientId;
+            const btn = document.getElementById('assessBtn');
+            const resultsDiv = document.getElementById('assessmentResults');
+            
+            if (!patientId) {
+                showError('Please select a patient or enter a Patient ID');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading"></span> Assessing...';
+            
+            try {
+                const response = await fetch('/assess', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ patient_id: patientId })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showAssessmentResult(data);
+                } else {
+                    showError(`Assessment failed: ${data.detail || data.message || 'Unknown error'}`);
+                }
+            } catch (error) {
+                showError(`Network error: ${error.message}`);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Assess Patient Risk';
+            }
+        }
+
+        // Show assessment result
+        function showAssessmentResult(data) {
+            const resultsDiv = document.getElementById('assessmentResults');
+            const badgeClass = `badge-${data.assessment.toLowerCase().replace(' ', '-')}`;
+            
+            resultsDiv.innerHTML = `
+                <div class="result-card">
+                    <div class="result-header">
+                        <div class="result-title">Assessment Result for ${data.patient_id}</div>
+                        <div class="assessment-badge ${badgeClass}">${data.assessment}</div>
+                    </div>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <strong>Clinical Reasoning:</strong><br>
+                        ${data.reasoning}
+                    </div>
+                    
+                    ${data.confidence_score ? `
+                        <div style="margin-bottom: 15px;">
+                            <strong>Confidence Score:</strong> ${(data.confidence_score * 100).toFixed(1)}%
+                        </div>
+                    ` : ''}
+                    
+                    ${data.citations && data.citations.length > 0 ? `
+                        <div class="citations">
+                            <h4>NG12 Citations (${data.citations.length})</h4>
+                            ${data.citations.map((citation, index) => `
+                                <div class="citation">
+                                    <div class="citation-header">
+                                        [${index + 1}] ${citation.source}, Page ${citation.page}
+                                    </div>
+                                    <div class="citation-excerpt">"${citation.excerpt}"</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+            
+            resultsDiv.classList.remove('hidden');
+            resultsDiv.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Show error message
+        function showError(message) {
+            const resultsDiv = document.getElementById('assessmentResults');
+            resultsDiv.innerHTML = `
+                <div class="result-card error">
+                    <div class="result-title">Error</div>
+                    <div style="margin-top: 10px;">${message}</div>
+                </div>
+            `;
+            resultsDiv.classList.remove('hidden');
+        }
+
+        // Chat functionality
+        function handleChatKeyPress(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendChatMessage();
+            }
+        }
+
+        async function sendChatMessage() {
+            const messageInput = document.getElementById('chatMessage');
+            const message = messageInput.value.trim();
+            const btn = document.getElementById('chatBtn');
+            
+            if (!message) return;
+
+            // Add user message to chat
+            addMessageToChat('user', message);
+            messageInput.value = '';
+            
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading"></span>';
+            
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        session_id: sessionId,
+                        message: message 
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    addMessageToChat('assistant', data.answer, data.citations);
+                } else {
+                    addMessageToChat('assistant', `Error: ${data.detail || 'Chat processing failed'}`, null, true);
+                }
+            } catch (error) {
+                addMessageToChat('assistant', `Network error: ${error.message}`, null, true);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Send';
+            }
+        }
+
+        function addMessageToChat(role, content, citations = null, isError = false) {
+            const messagesDiv = document.getElementById('chatMessages');
+            const timestamp = new Date().toLocaleTimeString();
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role}`;
+            
+            messageDiv.innerHTML = `
+                <div class="message-avatar">${role === 'user' ? 'You' : 'AI'}</div>
+                <div class="message-content ${isError ? 'error' : ''}">
+                    <div>${content}</div>
+                    ${citations && citations.length > 0 ? `
+                        <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee;">
+                            <strong>Citations:</strong><br>
+                            ${citations.map((citation, index) => `
+                                <div style="margin-top: 8px; font-size: 12px;">
+                                    [${index + 1}] NG12 p.${citation.page}: "${citation.excerpt.substring(0, 100)}..."
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                    <div class="message-time">${timestamp}</div>
+                </div>
+            `;
+            
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function clearChat() {
+            const messagesDiv = document.getElementById('chatMessages');
+            messagesDiv.innerHTML = `
+                <div class="message assistant">
+                    <div class="message-avatar">AI</div>
+                    <div class="message-content">
+                        <div>Chat cleared. How can I help you with NG12 guidelines?</div>
+                        <div class="message-time">System message</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function deleteSession() {
+            try {
+                await fetch(`/chat/${sessionId}`, { method: 'DELETE' });
+                sessionId = 'session_' + Math.random().toString(36).substr(2, 9);
+                document.getElementById('sessionId').textContent = sessionId;
+                clearChat();
+            } catch (error) {
+                console.error('Failed to delete session:', error);
+            }
+        }
+    </script>
+</body>
+</html>
